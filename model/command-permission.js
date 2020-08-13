@@ -7,9 +7,7 @@ const CommandPermission = {
      * @returns {Promise.<boolean>}
      */
     isMommy: async (message) => {
-        const member = await Guild.getMemberFromMessage(message);
-
-        return member.id === Config.mom;
+        return message.author.id === Config.mom;
     },
 
     /**

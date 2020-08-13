@@ -53,35 +53,8 @@ const mainProcess = () => {
 
 const botProcess = () => {
     const Discord = require('discord.js');
-    const CallerId = require('caller-id');
 
     global.bot = new Discord.Client({ fetchAllMembers: true });
-    global.isRightGuild = (guildSnowflake) => guildSnowflake === Config.guild;
-    global.debug = (message) => {
-        if (process.env.NOSTRADAMUS_DEBUG === '1') {
-            const caller = CallerId.getData();
-            const path = caller.filePath.substr(
-                caller.filePath.toLowerCase().indexOf('/nostradamus/') + 7
-            ).substr(
-                caller.filePath.toLowerCase().indexOf('/shakespeare/') + 7
-            );
-            const prefix = `${path}:${caller.lineNumber}`;
-
-            if (typeof message === 'string') {
-                Logger.info(`${prefix} | ${message}`);
-            } else {
-                Logger.info(prefix);
-                Logger.debug(message);
-            }
-        }
-    };
-    global.saveDebugFile = (filename, data) => {
-        if (!fs.existsSync('./debug')) {
-            fs.mkdirSync('./debug');
-        }
-
-        fs.writeFileSync(`./debug/${filename}`, data);
-    };
 
     const Config = require('./config.json');
     const Command = require('./model/command');

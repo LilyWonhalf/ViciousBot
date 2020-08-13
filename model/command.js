@@ -51,25 +51,19 @@ const Command = {
             const calledCommand = content.shift().toLowerCase();
 
             if (await Command.isValid(calledCommand, message)) {
-                const member = await Guild.getMemberFromMessage(message);
+                let commandName = calledCommand;
+                isCommand = true;
 
-                if (member === null) {
-                    message.reply('sorry, you do not seem to be on the server.');
+                if (Command.commandAliases.hasOwnProperty(calledCommand)) {
+                    commandName = Command.commandAliases[calledCommand];
+                }
+
+                const commandInstance = cachelessRequire(Command.commandList.get(commandName));
+
+                if (commandInstance !== null) {
+                    commandInstance.process(message, content, Command);
                 } else {
-                    let commandName = calledCommand;
-                    isCommand = true;
-
-                    if (Command.commandAliases.hasOwnProperty(calledCommand)) {
-                        commandName = Command.commandAliases[calledCommand];
-                    }
-
-                    const commandInstance = cachelessRequire(Command.commandList.get(commandName));
-
-                    if (commandInstance !== null) {
-                        commandInstance.process(message, content, Command);
-                    } else {
-                        Command.commandList.delete(commandName);
-                    }
+                    Command.commandList.delete(commandName);
                 }
             }
         }

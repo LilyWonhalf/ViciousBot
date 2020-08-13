@@ -1,31 +1,42 @@
 const Logger = require('@lilywonhalf/pretty-logger');
-const Config = require('../config.json');
 const Discord = require('discord.js');
 
 const MESSAGES_TO_CACHE_AMOUNT = 10000;
 
 const Guild = {
-    /** {Guild} */
-    discordGuild: null,
-
-    /** {TextChannel} */
-    botChannel: null,
-
     /** {Collection} */
     messagesCache: new Discord.Collection(),
 
     init: async () => {
-        Guild.discordGuild = bot.guilds.cache.find(guild => guild.id === Config.guild);
-        Guild.botChannel = Guild.discordGuild.channels.cache.find(channel => channel.id === Config.channels.bot);
-        await Guild.cacheMessages();
+        await Guild.cacheAllMessages();
     },
 
-    cacheMessages: async () => {
+    cacheAllMessages: async () => {
+        const channels = bot.guilds.cache.reduce(
+            (carry, guild) => carry === null ? guild.channels.cache : carry.concat(guild.channels.cache),
+            null
+        );
+
         await Promise.all(
-            Guild.discordGuild.channels.cache.filter(channel => channel.type === 'text').array().map(
+            channels.filter(channel => channel.type === 'text').array().map(
                 channel => Guild.cacheChannelMessages(channel, MESSAGES_TO_CACHE_AMOUNT)
             )
         );
+    },
+
+    /**
+     * @param {Guild} guild
+     */
+    cacheGuildMessages: async (guild) => {
+        Logger.info(`Syncing guild ${guild.name} messages...`);
+
+        await Promise.all(
+            guild.channels.cache.filter(channel => channel.type === 'text').array().map(
+                channel => Guild.cacheChannelMessages(channel, MESSAGES_TO_CACHE_AMOUNT)
+            )
+        );
+
+        Logger.info(`Guild ${guild.name}'s messages synced!`);
     },
 
     /**
@@ -61,28 +72,18 @@ const Guild = {
      * @returns {Promise.<GuildMember|null>}
      */
     getMemberFromMessage: async (message) => {
-        return await Guild.discordGuild.members.fetch(message.author).catch(exception => {
+        return message.guild !== null ? await message.guild.members.fetch(message.author).catch(exception => {
             Logger.error(exception.toString());
 
             return null;
-        });
+        }) : null;
     },
 
     /**
      * @param {GuildMember} member
      */
     isMemberAdmin: (member) => {
-        return member !== undefined && member !== null && member.roles.cache.has(Config.roles.admin);
-    },
-
-    /**
-     * @param {string} roleName
-     * @returns {Role|null}
-     */
-    getRoleByName: (roleName) => {
-        return roleName === undefined || roleName === null ? null : Guild.discordGuild.roles.cache.find(
-            role => role.name.toLowerCase() === roleName.toLowerCase()
-        );
+        return member !== undefined && member !== null && member.hasPermission(Discord.Permissions.FLAGS.ADMINISTRATOR);
     },
 
     /**
@@ -108,7 +109,7 @@ const Guild = {
         let description = message.content;
         let timestamp = message.createdTimestamp;
 
-        if (description.length < 1 && embeds.length > 0) {
+        if (description.length < 1 && embeds.length > 0 && typeof embeds[0].description !== 'undefined') {
             description = embeds[0].description.trim();
 
             if (message.author.bot) {
@@ -137,7 +138,11 @@ const Guild = {
     findDesignatedMemberInMessage: (message) => {
         let foundMembers = [];
         let certain = true;
-        const memberList = bot.users.cache.concat(Guild.discordGuild.members.cache);
+        let memberList = bot.users.cache;
+
+        if (message.guild !== null) {
+            memberList = memberList.concat(message.guild.members.cache);
+        }
 
         if (message.mentions.members !== null && message.mentions.members.size > 0) {
             foundMembers = message.mentions.members.array();

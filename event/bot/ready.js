@@ -9,7 +9,7 @@ module.exports = async () => {
 
     Logger.info('Syncing guilds...');
     await Guild.init();
-    Logger.info('Guilds synced. Serving in ' + Guild.discordGuild.name);
+    Logger.info(`Guilds synced. Serving in ${bot.guilds.cache.size} guild(s)`);
 
     Logger.info('--------');
 
